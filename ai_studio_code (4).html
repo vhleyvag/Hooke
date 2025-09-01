@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoja de Cálculo: Ley de Hooke</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            text-align: center;
+            padding: 15px;
+            background-color: #333;
+            color: white;
+            margin: 0 0 10px 0;
+            flex-shrink: 0;
+        }
+        .main-container {
+            display: flex;
+            flex-grow: 1;
+            padding: 0 10px 10px 10px;
+            gap: 0; /* Remove gap to make the resizer visually connect sections */
+            overflow: hidden;
+            position: relative; /* Needed for resizer positioning */
+        }
+        .left-section, .right-section {
+            background-color: white;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            /* Flex-basis and flex-grow will be set by JavaScript for resizing */
+            overflow: hidden; /* Ensure content doesn't spill during resize */
+        }
+        .left-section {
+            overflow-y: auto; /* Habilita el scroll vertical SOLO para esta sección */
+            border-top-right-radius: 0; /* Adjust corners for resizer */
+            border-bottom-right-radius: 0;
+        }
+        .right-section {
+            border-top-left-radius: 0; /* Adjust corners for resizer */
+            border-bottom-left-radius: 0;
+        }
+
+        .left-section h2 {
+            margin-top: 0;
+            flex-shrink: 0;
+        }
+        .table-container {
+            flex-grow: 1;
+        }
+
+        .right-section h2 {
+            text-align: center;
+            margin-top: 0;
+            font-size: 1.2em;
+            color: #333;
+            flex-shrink: 0;
+        }
+        #chart-container {
+            position: relative;
+            width: 100%;
+            max-height: 700px; /* Límite de altura para el contenedor de la gráfica */
+            flex-grow: 1;
+            min-height: 300px;
+        }
+
+        /* Estilos de la tabla */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 0.85em;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        th.row-header {
+            background-color: #e9e9e9;
+            font-weight: bold;
+            text-align: center;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+        thead th.col-header {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        thead th.row-header { /* Esquina superior izquierda fija */
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 3;
+        }
+
+        td.label {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 95%;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        .output-cell, .input-data-cell {
+            font-family: monospace;
+            text-align: right;
+        }
+        .output-cell {
+            background-color: #e0f7fa;
+        }
+        /* Specific styling for empty cells A2 and B2 */
+        #cell-A2, #cell-B2 {
+            background-color: #FFF9C4 !important; /* Use !important to override .empty-row td if needed */
+        }
+        td[contenteditable="true"] {
+            background-color: #fff9c4;
+        }
+        td[contenteditable="true"]:focus {
+            outline: 2px solid #007bff;
+            background-color: white;
+        }
+        .empty-row td {
+            height: 16px;
+        }
+
+        /* Resizer styles */
+        .resizer {
+            width: 10px; /* Width of the draggable bar */
+            cursor: ew-resize;
+            background-color: #ccc;
+            flex-shrink: 0; /* Prevent resizer from shrinking */
+            z-index: 10; /* Ensure it's above other content */
+            position: relative;
+            margin: 0 -5px; /* Overlap with sections to make it visually continuous */
+        }
+        .resizer:hover {
+            background-color: #999;
+        }
+        .resizer.active {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ley de Hooke: Fuerza vs. Alargamiento</h1>
+    <div class="main-container" id="main-container">
+        <div class="left-section" id="left-section">
+            <h2>Datos y Cálculos</h2>
+            <div class="table-container">
+                <table id="spreadsheet">
+                    <colgroup>
+                        <col style="width: 35px;">  <!-- Números de fila -->
+                        <col style="width: 180px;"> <!-- Columna A -->
+                        <col style="width: 150px;"> <!-- Columna B -->
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="row-header"></th> <!-- Celda esquina -->
+                            <th class="col-header">A</th>
+                            <th class="col-header">B</th>
+                        </tr>
+                    </thead>
+                    <tbody id="spreadsheet-body">
+                        <!-- Fila 1 -->
+                        <tr>
+                            <th class="row-header">1</th>
+                            <td class="label">Constante elástica k (N/cm):</td>
+                            <td><input type="number" id="input-B1" step="0.1" value="3.0"></td>
+                        </tr>
+                        <!-- Fila 2 (Vacía) - Coloreada -->
+                        <tr class="empty-row">
+                            <th class="row-header">2</th>
+                            <td id="cell-A2"></td>
+                            <td id="cell-B2"></td>
+                        </tr>
+                        <!-- Fila 3 (Títulos) -->
+                        <tr>
+                            <th class="row-header">3</th>
+                            <td class="label" id="label-A3">Fuerza (N)</td>
+                            <td class="label" id="label-B3">Alargamiento (cm)</td>
+                        </tr>
+                        <!-- Filas 4 a 204 se generarán con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Resizer element -->
+        <div class="resizer" id="resizer"></div>
+
+        <div class="right-section" id="right-section">
+            <h2>Gráfica: Alargamiento vs. Fuerza</h2>
+            <div id="chart-container">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tbody = document.getElementById('spreadsheet-body');
+        const inputK = document.getElementById('input-B1');
+
+        const totalStaticRows = 3; // Rows 1, 2, 3
+        const numDataRows = 201; // From 0.00 to 20.00 with 0.1 increments = 201 values
+
+        let myChart = null;
+        const chartCanvas = document.getElementById('myChart');
+
+        const chartConfig = {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Alargamiento (cm)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    showLine: true,
+                    tension: 0, // Straight line for Hooke's Law
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: { display: true, text: 'Fuerza (N)' },
+                        beginAtZero: true,
+                        min: 0,
+                        max: 20
+                    },
+                    y: {
+                        title: { display: true, text: 'Alargamiento (cm)' },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    title: { display: false }
+                }
+            }
+        };
+
+        function updateCalculationsAndChart() {
+            const k_val = parseFloat(inputK.value) || 0;
+            const newDataPointsForChart = [];
+
+            for (let i = 0; i < numDataRows; i++) {
+                const currentRowNumber = totalStaticRows + 1 + i; // Start from row 4
+                const cellA_force_element = document.getElementById(`cell-A${currentRowNumber}`);
+                const cellB_elongation_element = document.getElementById(`cell-B${currentRowNumber}`);
+
+                const force = parseFloat(cellA_force_element.textContent);
+
+                if (!isNaN(force) && cellB_elongation_element) {
+                    let elongation_calc;
+                    if (k_val !== 0) {
+                        elongation_calc = force / k_val;
+                        cellB_elongation_element.textContent = elongation_calc.toFixed(3);
+                        if (!isNaN(force) && !isNaN(elongation_calc)) {
+                            newDataPointsForChart.push({ x: force, y: elongation_calc });
+                        }
+                    } else {
+                        cellB_elongation_element.textContent = "Div/0!"; // Handle division by zero
+                    }
+                }
+            }
+
+            if (myChart) {
+                myChart.data.datasets[0].data = newDataPointsForChart;
+                myChart.update();
+            }
+        }
+
+        function generateTableStructure() {
+            for (let i = 0; i < numDataRows; i++) {
+                const force = i * 0.1; // 0.00, 0.10, ..., 20.00
+                const currentRowNumber = totalStaticRows + 1 + i; // Starting from row 4
+
+                const row = document.createElement('tr');
+                const thRowNum = document.createElement('th');
+                thRowNum.className = 'row-header';
+                thRowNum.textContent = currentRowNumber;
+                row.appendChild(thRowNum);
+
+                const tdForce = document.createElement('td');
+                tdForce.id = `cell-A${currentRowNumber}`;
+                tdForce.className = 'input-data-cell';
+                tdForce.textContent = force.toFixed(2); // Two decimal places
+                row.appendChild(tdForce);
+
+                const tdElongation = document.createElement('td');
+                tdElongation.id = `cell-B${currentRowNumber}`;
+                tdElongation.className = 'output-cell';
+                row.appendChild(tdElongation);
+
+                tbody.appendChild(row);
+            }
+        }
+
+        inputK.addEventListener('input', updateCalculationsAndChart);
+
+        window.addEventListener('load', () => {
+            generateTableStructure();
+            if (chartCanvas) {
+                myChart = new Chart(chartCanvas.getContext('2d'), chartConfig);
+            }
+            updateCalculationsAndChart();
+        });
+
+
+        // Resizer Logic
+        const resizer = document.getElementById('resizer');
+        const leftSection = document.getElementById('left-section');
+        const rightSection = document.getElementById('right-section');
+        const mainContainer = document.getElementById('main-container');
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            resizer.classList.add('active');
+            document.addEventListener('mousemove', resizeSections);
+            document.addEventListener('mouseup', stopResizing);
+        });
+
+        function resizeSections(e) {
+            if (!isResizing) return;
+
+            const containerRect = mainContainer.getBoundingClientRect();
+            const mouseX = e.clientX;
+            const newLeftWidth = mouseX - containerRect.left; // Calculate new width for left section
+
+            // Ensure sections don't go below a minimum width
+            const minWidth = 150; // Minimum width for each section
+
+            if (newLeftWidth > minWidth && (containerRect.width - newLeftWidth) > minWidth) {
+                leftSection.style.flexBasis = `${newLeftWidth}px`;
+                leftSection.style.flexGrow = '0'; // Prevent it from growing beyond specified basis
+                rightSection.style.flexBasis = `${containerRect.width - newLeftWidth}px`;
+                rightSection.style.flexGrow = '0'; // Prevent it from growing beyond specified basis
+            }
+            if (myChart) {
+                myChart.resize(); // Inform Chart.js to redraw if its container size changes
+            }
+        }
+
+        function stopResizing() {
+            isResizing = false;
+            resizer.classList.remove('active');
+            document.removeEventListener('mousemove', resizeSections);
+            document.removeEventListener('mouseup', stopResizing);
+        }
+
+        // Set initial flex-basis for sections (e.g., 50% each)
+        window.addEventListener('resize', () => {
+            // Recalculate and apply flex-basis on window resize if not explicitly set by user
+            if (!isResizing && leftSection.style.flexGrow === '1') { // Only if initial flex-grow is active
+                 const containerWidth = mainContainer.getBoundingClientRect().width;
+                 leftSection.style.flexBasis = `${containerWidth / 2}px`;
+                 rightSection.style.flexBasis = `${containerWidth / 2}px`;
+            }
+            if (myChart) {
+                myChart.resize();
+            }
+        });
+
+        // Initial setup for flex-basis
+        window.addEventListener('load', () => {
+            const containerWidth = mainContainer.getBoundingClientRect().width;
+            leftSection.style.flexBasis = `${containerWidth / 2}px`;
+            rightSection.style.flexBasis = `${containerWidth / 2}px`;
+            leftSection.style.flexGrow = '0'; // Set to 0 initially to allow flexBasis to control
+            rightSection.style.flexGrow = '0'; // Set to 0 initially to allow flexBasis to control
+            if (myChart) {
+                myChart.resize(); // Ensure chart is drawn correctly on load
+            }
+        });
+    </script>
+
+</body>
+</html>
