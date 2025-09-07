@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuestionario Diagnóstico - Ley de Hooke</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .quiz-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .instructions {
+            background-color: #eef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid #55a;
+        }
+        .quiz-image-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .quiz-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .question-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .question-text {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .options-list {
+            list-style: none;
+            padding: 0;
+        }
+        .options-list li {
+            margin-bottom: 10px;
+            display: flex; /* Usar flexbox para alinear items horizontalmente */
+            align-items: center; /* Centrar items verticalmente en la línea */
+        }
+
+        .options-list input[type="radio"] {
+            margin-right: 10px; /* Espacio entre el radio y el texto */
+            flex-shrink: 0; /* Evita que el botón de radio se encoja */
+        }
+
+        .options-list label {
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            flex-grow: 1; /* Permite que la etiqueta ocupe el espacio restante */
+        }
+        .options-list label:hover {
+            background-color: #f0f0f0;
+        }
+        .feedback {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .feedback.correct {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .feedback.incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .navigation-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .results-container {
+            text-align: center;
+            padding: 20px;
+            background-color: #e9f7ef;
+            border-radius: 5px;
+            border: 1px solid #a9d1b9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-container">
+        <h1 id="quiz-title">Cuestionario Diagnóstico - Ley de Hooke</h1>
+        <p class="instructions" id="quiz-instructions">Observa la imagen del resorte y la gráfica. Luego, responde las siguientes preguntas. Al terminar, recibirás retroalimentación sobre cada respuesta.</p>
+
+        <div class="quiz-image-container">
+            <img src="https://vhleyvag.github.io/Hooke/02_Hooke_Imagen_cuest_a.png" alt="Simulador de la Ley de Hooke" class="quiz-image">
+            <small>Imagen del simulador de la Ley de Hooke</small>
+        </div>
+
+        <div id="question-area">
+            <!-- Questions will be loaded here by JavaScript -->
+        </div>
+
+        <div class="navigation-buttons">
+            <button id="submit-answer" onclick="submitAnswer()" disabled>Enviar Respuesta</button>
+            <button id="next-question" onclick="loadNextQuestion()" style="display:none;">Siguiente Pregunta</button>
+        </div>
+
+        <div id="results-area" class="results-container" style="display:none;">
+            <h2>Resultados del Cuestionario</h2>
+            <p id="score-text"></p>
+            <button onclick="restartQuiz()">Reiniciar Cuestionario</button>
+        </div>
+    </div>
+
+    <script>
+        // Función para mezclar un array (Fisher-Yates shuffle)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        const rawQuizData = {
+          "cuestionario": [
+            {
+              "id": 1,
+              "pregunta": "¿Qué relación matemática describe la Ley de Hooke para un resorte?",
+              "opciones": [
+                "F = m * a",
+                "F = k * y",
+                "F = k / y",
+                "F = y / k"],
+              "respuesta_correcta": "F = k * y",
+              "retroalimentacion_correcta": "¡Correcto! La Ley de Hooke establece que la fuerza es proporcional al alargamiento, con k como constante de elasticidad.",
+              "retroalimentacion_incorrecta": "Revisa la Ley de Hooke: la fuerza F aplicada a un resorte es proporcional a su alargamiento, no a la masa ni a la división entre variables."
+            },
+            {
+              "id": 2,
+              "pregunta": "¿Cómo se interpreta físicamente la constante elástica k?",
+              "opciones": ["La energía almacenada en el resorte", "La fuerza necesaria para estirarlo un cm", "La masa máxima que soporta", "La longitud inicial del resorte"],
+              "respuesta_correcta": "La fuerza necesaria para estirarlo un cm",
+              "retroalimentacion_correcta": "¡Muy bien! La constante k indica cuánta fuerza se requiere para alargar el resorte una unidad de longitud.",
+              "retroalimentacion_incorrecta": "Incorrecto. k no es energía ni longitud, sino la fuerza necesaria por unidad de alargamiento."
+            },
+            {
+              "id": 3,
+              "pregunta": "Si aumenta el valor de la constante elástica k y y mantienes constante la fuerza F, ¿qué ocurre con el alargamiento del resorte?",
+              "opciones": [
+                "El alargamiento es mayor",
+                "El alargamiento es menor",
+                "El alargamiento no cambia",
+                "El resorte se rompe"
+              ],
+              "respuesta_correcta": "El alargamiento es menor",
+              "retroalimentacion_correcta": "¡Exacto! Al aumentar k, el resorte se vuelve más rígido y  se deforma menos ante la misma fuerza.",
+              "retroalimentacion_incorrecta": "Piensa en la fórmula y = F/k: si k crece, el alargamiento disminuye."
+            },
+           {
+              "id": 4,
+              "pregunta": "Si F = 8.8 N y k = 2 N/cm, ¿cuál es el alargamiento del resorte?",
+              "opciones": [
+                "2.2 cm",
+                "4.4 cm",
+                "8.8 cm",
+                "17.6 cm"
+              ],
+              "respuesta_correcta": "4.4 cm",
+              "retroalimentacion_correcta": "¡Correcto! y = F/k = 8.8 / 2 = 4.4 cm.",
+              "retroalimentacion_incorrecta": "Recuerda usar la fórmula y = F/k. Al dividir 8.8 entre 2 obtenemos 4.4 cm."
+            },
+            {
+              "id": 5,
+              "pregunta": "La ecuación y = F/k permite calcular:",
+              "opciones": [
+                "La constante elástica del resorte",
+                "El alargamiento del resorte a partir de la fuerza y k",
+                "La fuerza ejercida por el resorte",
+                "El peso de la masa colgada"
+              ],
+              "respuesta_correcta": "El alargamiento del resorte a partir de la fuerza y k",
+              "retroalimentacion_correcta": "¡Correcto! Esta ecuación permite calcular cuánto se estira el resorte para una fuerza dada.",
+              "retroalimentacion_incorrecta": "Recuerda que y = F/k se obtiene de la Ley de Hooke y sirve para calcular el alargamiento."
+            },
+            {
+              "id": 6,
+              "pregunta": "En la gráfica del simulador, ¿qué representa el eje X?",
+              "opciones": ["El alargamiento en cm", "La constante elástica k", "La fuerza en Newtons", "La energía almacenada"],
+              "respuesta_correcta": "La fuerza en Newtons",
+              "retroalimentacion_correcta": "¡Exacto! El eje X representa la fuerza aplicada sobre el resorte.",
+              "retroalimentacion_incorrecta": "No es correcto. Observa que en la gráfica el eje X tiene la unidad [N], correspondiente a fuerza."
+            },
+            {
+              "id": 7,
+              "pregunta": "En la gráfica del simulador, ¿qué representa el eje Y?",
+              "opciones": ["La masa en kilogramos", "El alargamiento en cm", "La constante elástica", "El tiempo en segundos"],
+              "respuesta_correcta": "El alargamiento en cm",
+              "retroalimentacion_correcta": "¡Correcto! El eje Y indica cuánto se estira el resorte en centímetros.",
+              "retroalimentacion_incorrecta": "Incorrecto. Recuerda que la gráfica muestra la relación entre fuerza (X) y alargamiento (Y)."
+            },
+            {
+              "id": 8,
+              "pregunta": "Si F = 0 N, ¿qué valor tendrá el alargamiento y?",
+              "opciones": ["0 cm", "1 cm", "Igual a k", "Infinito"],
+              "respuesta_correcta": "0 cm",
+              "retroalimentacion_correcta": "¡Exacto! Sin fuerza aplicada, el resorte no se deforma.",
+              "retroalimentacion_incorrecta": "No es correcto. Recuerda que si F = 0, entonces y = F/k = 0."
+            },
+            {
+              "id": 9,
+              "pregunta": "En el punto (8.8, 4.4) de la gráfica, ¿qué representa el valor 8.8?",
+              "opciones": ["El alargamiento", "La fuerza aplicada", "La constante k", "El peso del resorte"],
+              "respuesta_correcta": "La fuerza aplicada",
+              "retroalimentacion_correcta": "¡Correcto! En la gráfica, el valor sobre el eje X corresponde a la fuerza aplicada.",
+              "retroalimentacion_incorrecta": "No es correcto. El valor 8.8 se lee en el eje X, que corresponde a la fuerza."
+            },
+           {
+              "id": 10,
+              "pregunta": "Si se duplica la fuerza aplicada sobre el resorte, ¿qué sucede con el alargamiento?",
+              "opciones": [
+                "Se mantiene igual",
+                "Se duplica",
+                "Se reduce a la mitad",
+                "Se cuadruplica"
+              ],
+              "respuesta_correcta": "Se duplica",
+              "retroalimentacion_correcta": "¡Muy bien! Como F y y son proporcionales, si F se duplica, y también.",
+              "retroalimentacion_incorrecta": "Observa la proporcionalidad en la fórmula F = k*y. Si F se duplica y k no cambia, y también se duplica."
+            },
+            {
+              "id": 11,
+              "pregunta": "Si se aplica una fuerza F sobre un resorte, ¿qué representa la variable y en la Ley de Hooke?",
+              "opciones": [
+                "La constante elástica",
+                "El estiramiento o alargamiento del resorte",
+                "La fuerza aplicada",
+                "La masa suspendida"
+              ],
+              "respuesta_correcta": "El estiramiento o alargamiento del resorte",
+              "retroalimentacion_correcta": "¡Bien hecho! y representa cuánto se alarga el resorte debido a la fuerza aplicada.",
+              "retroalimentacion_incorrecta": "No es correcto. y no representa la fuerza ni la masa, sino el alargamiento del resorte."
+            },
+            {
+              "id": 12,
+              "pregunta": "Según la gráfica del simulador, ¿qué tipo de relación existe entre la fuerza F y el alargamiento y?",
+              "opciones": [
+                "Cuadrática",
+                "Exponencial",
+                "Lineal",
+                "Logarítmica"
+              ],
+              "respuesta_correcta": "Lineal",
+              "retroalimentacion_correcta": "¡Muy bien! La gráfica es una recta, lo que indica una relación lineal.",
+              "retroalimentacion_incorrecta": "Observa la gráfica: la relación no es curva, sino recta, lo que significa que es lineal."
+            },
+          ]
+        };
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let questions = []; // Array para almacenar las preguntas procesadas y mezcladas
+
+        // Función para transformar los datos del JSON al formato esperado por el script existente
+        function formatQuizData(jsonData) {
+            return jsonData.cuestionario.map(q => {
+                const options = q.opciones.map(optText => ({
+                    text: optText,
+                    isCorrect: optText === q.respuesta_correcta,
+                    feedback: (optText === q.respuesta_correcta) ? q.retroalimentacion_correcta : q.retroalimentacion_incorrecta
+                }));
+                return {
+                    question: q.pregunta,
+                    options: options
+                };
+            });
+        }
+
+        const quizData = {
+          "title": "Cuestionario Diagnóstico - Ley de Hooke",
+          "instructions": "Observa la imagen del resorte y la gráfica. Luego, responde las siguientes preguntas. Al terminar, recibirás retroalimentación sobre cada respuesta.",
+        };
+
+
+        const quizTitleEl = document.getElementById('quiz-title');
+        const quizInstructionsEl = document.getElementById('quiz-instructions');
+        const questionAreaEl = document.getElementById('question-area');
+        const submitAnswerBtn = document.getElementById('submit-answer');
+        const nextQuestionBtn = document.getElementById('next-question');
+        const resultsAreaEl = document.getElementById('results-area');
+        const scoreTextEl = document.getElementById('score-text');
+
+        function loadQuiz() {
+            quizTitleEl.textContent = quizData.title;
+            quizInstructionsEl.textContent = quizData.instructions;
+
+            // Formatear y mezclar las preguntas
+            questions = formatQuizData(rawQuizData);
+            shuffleArray(questions); // Mezclar el orden de las preguntas
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            // Clear previous question and feedback
+            questionAreaEl.innerHTML = '';
+            submitAnswerBtn.style.display = 'inline-block';
+            nextQuestionBtn.style.display = 'none';
+            submitAnswerBtn.disabled = true; // Disabled until an option is selected
+
+            if (currentQuestionIndex < questions.length) {
+                const currentQuestion = questions[currentQuestionIndex];
+                const questionContainer = document.createElement('div');
+                questionContainer.classList.add('question-container');
+
+                const questionText = document.createElement('p');
+                questionText.classList.add('question-text');
+                questionText.textContent = `${currentQuestionIndex + 1}. ${currentQuestion.question}`;
+                questionContainer.appendChild(questionText);
+
+                const optionsList = document.createElement('ul');
+                optionsList.classList.add('options-list');
+
+                // Mezclar las opciones de la pregunta actual
+                const shuffledOptions = [...currentQuestion.options];
+                shuffleArray(shuffledOptions);
+
+                shuffledOptions.forEach((option, index) => {
+                    const listItem = document.createElement('li');
+                    const radioInput = document.createElement('input');
+                    radioInput.type = 'radio';
+                    radioInput.name = `question-${currentQuestionIndex}`;
+                    radioInput.id = `q${currentQuestionIndex}-option${index}`;
+                    // Guardar el valor original del índice para poder referenciar la retroalimentación
+                    radioInput.value = currentQuestion.options.indexOf(option);
+                    radioInput.onchange = () => { submitAnswerBtn.disabled = false; };
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `q${currentQuestionIndex}-option${index}`;
+                    label.textContent = option.text;
+
+                    listItem.appendChild(radioInput); // Radio button first
+                    listItem.appendChild(label);      // Then label
+                    optionsList.appendChild(listItem);
+                });
+
+                questionContainer.appendChild(optionsList);
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.id = `feedback-${currentQuestionIndex}`;
+                feedbackDiv.classList.add('feedback');
+                questionContainer.appendChild(feedbackDiv);
+
+                questionAreaEl.appendChild(questionContainer);
+            } else {
+                showResults();
+            }
+        }
+
+        function submitAnswer() {
+            const currentQuestion = questions[currentQuestionIndex];
+            const selectedOptionValue = document.querySelector(`input[name="question-${currentQuestionIndex}"]:checked`);
+
+            if (!selectedOptionValue) {
+                alert("Por favor, selecciona una opción.");
+                return;
+            }
+
+            // Usamos el valor guardado en 'value' para obtener la opción original
+            const originalOptionIndex = parseInt(selectedOptionValue.value);
+            const selectedOptionData = currentQuestion.options[originalOptionIndex];
+            const feedbackDiv = document.getElementById(`feedback-${currentQuestionIndex}`);
+
+            if (selectedOptionData.isCorrect) {
+                feedbackDiv.textContent = selectedOptionData.feedback;
+                feedbackDiv.classList.remove('incorrect');
+                feedbackDiv.classList.add('correct');
+                score++;
+            } else {
+                feedbackDiv.textContent = selectedOptionData.feedback;
+                feedbackDiv.classList.remove('correct');
+                feedbackDiv.classList.add('incorrect');
+            }
+
+            document.querySelectorAll(`input[name="question-${currentQuestionIndex}"]`).forEach(input => {
+                input.disabled = true;
+            });
+            submitAnswerBtn.disabled = true;
+            submitAnswerBtn.style.display = 'none';
+            nextQuestionBtn.style.display = 'inline-block';
+
+            if (currentQuestionIndex === questions.length - 1) {
+                nextQuestionBtn.textContent = "Ver Resultados";
+            }
+        }
+
+        function loadNextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        function showResults() {
+            questionAreaEl.style.display = 'none';
+            submitAnswerBtn.style.display = 'none';
+            nextQuestionBtn.style.display = 'none';
+            resultsAreaEl.style.display = 'block';
+            scoreTextEl.textContent = `Obtuviste ${score} de ${questions.length} preguntas correctas.`;
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            questionAreaEl.style.display = 'block';
+            resultsAreaEl.style.display = 'none';
+            nextQuestionBtn.textContent = "Siguiente Pregunta";
+            loadQuiz(); // Recargar el quiz para mezclar de nuevo las preguntas
+        }
+
+        window.onload = loadQuiz;
+    </script>
+
+</body>
+</html>

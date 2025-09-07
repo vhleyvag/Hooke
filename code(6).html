@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuestionario: Ley de Hooke</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .quiz-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .instructions {
+            background-color: #eef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid #55a;
+        }
+        /* Eliminado .quiz-image-container y .quiz-image */
+        .question-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .question-text {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .options-list {
+            list-style: none;
+            padding: 0;
+        }
+        .options-list li {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .options-list input[type="radio"] {
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .options-list label {
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            flex-grow: 1;
+        }
+
+        .options-list label:hover {
+            background-color: #f0f0f0;
+        }
+        .feedback {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .feedback.correct {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .feedback.incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .navigation-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .results-container {
+            text-align: center;
+            padding: 20px;
+            background-color: #e9f7ef;
+            border-radius: 5px;
+            border: 1px solid #a9d1b9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-container">
+        <h1 id="quiz-title">Cuestionario: Ley de Hooke</h1>
+        <p class="instructions" id="quiz-instructions">Responde las siguientes preguntas sobre la Ley de Hooke y la hoja de cálculo.</p>
+
+        <!-- La sección de imagen ha sido eliminada -->
+
+        <div id="question-area">
+            <!-- Questions will be loaded here by JavaScript -->
+        </div>
+
+        <div class="navigation-buttons">
+            <button id="submit-answer" onclick="submitAnswer()" disabled>Enviar Respuesta</button>
+            <button id="next-question" onclick="loadNextQuestion()" style="display:none;">Siguiente Pregunta</button>
+        </div>
+
+        <div id="results-area" class="results-container" style="display:none;">
+            <h2>Resultados del Cuestionario</h2>
+            <p id="score-text"></p>
+            <button onclick="restartQuiz()">Reiniciar Cuestionario</button>
+        </div>
+    </div>
+
+    <script>
+        const quizDataRaw = [
+            {
+                "id": 1,
+                "question": "¿Qué valor se escribe en la celda B1 de la hoja de cálculo?",
+                "options": [
+                    {
+                        "text": "La constante elástica k en N/cm",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! En B1 se coloca la constante elástica k en N/cm."
+                    },
+                    {
+                        "text": "El valor inicial de la fuerza",
+                        "correct": false,
+                        "feedback": "Incorrecto. El valor inicial de la fuerza se escribe en A4, no en B1."
+                    },
+                    {
+                        "text": "El valor inicial del alargamiento",
+                        "correct": false,
+                        "feedback": "Incorrecto. El alargamiento se calcula en la columna B, no se escribe en B1."
+                    },
+                    {
+                        "text": "El incremento de la fuerza",
+                        "correct": false,
+                        "feedback": "Incorrecto. El incremento de la fuerza se define en la serie de la columna A."
+                    }
+                ]
+            },
+            {
+                "id": 2,
+                "question": "¿Cómo se generan los valores en el rango A4:A204?",
+                "options": [
+                    {
+                        "text": "Escribiendo manualmente cada número",
+                        "correct": false,
+                        "feedback": "Incorrecto. Sería muy ineficiente escribir manualmente todos los valores."
+                    },
+                    {
+                        "text": "Con una serie desde 0 hasta 20 con incremento de 0.1",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! La columna A contiene una serie con incrementos de 0.1 hasta 20."
+                    },
+                    {
+                        "text": "Copiando el mismo valor en todas las celdas",
+                        "correct": false,
+                        "feedback": "Incorrecto. La columna A debe mostrar valores diferentes, no repetidos."
+                    },
+                    {
+                        "text": "Usando la función ALEATORIO()",
+                        "correct": false,
+                        "feedback": "Incorrecto. ALEATORIO generaría valores sin orden, no una serie creciente."
+                    }
+                ]
+            },
+            {
+                "id": 3,
+                "question": "¿Qué fórmula debe escribirse en la celda B4 para calcular el alargamiento correspondiente?",
+                "options": [
+                    {
+                        "text": "=A4*$B$1",
+                        "correct": false,
+                        "feedback": "Incorrecto. Esa fórmula multiplica, pero según Hooke, y = F/k."
+                    },
+                    {
+                        "text": "=B1/A4",
+                        "correct": false,
+                        "feedback": "Incorrecto. Esto dividiría k entre la fuerza, lo cual no corresponde a la fórmula."
+                    },
+                    {
+                        "text": "=A4/$B$1",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! El alargamiento es F/k, usando referencia absoluta para k."
+                    },
+                    {
+                        "text": "=$A$4*B1",
+                        "correct": false,
+                        "feedback": "Incorrecto. Esa fórmula usa la celda A4 fija y no calcula correctamente el alargamiento."
+                    }
+                ]
+            },
+            {
+                "id": 4,
+                "question": "¿Qué tipo de referencia debe usarse para la celda B1 en la fórmula de la columna B?",
+                "options": [
+                    {
+                        "text": "Referencia relativa",
+                        "correct": false,
+                        "feedback": "Incorrecto. Una referencia relativa cambiaría al arrastrar la fórmula."
+                    },
+                    {
+                        "text": "Referencia absoluta",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! Se usa $B$1 para mantener fija la constante k."
+                    },
+                    {
+                        "text": "Referencia mixta",
+                        "correct": false,
+                        "feedback": "Incorrecto. No es necesario fijar solo fila o columna, sino ambas."
+                    },
+                    {
+                        "text": "Referencia circular",
+                        "correct": false,
+                        "feedback": "Incorrecto. Una referencia circular generaría error en la hoja."
+                    }
+                ]
+            },
+            {
+                "id": 5,
+                "question": "¿Qué formato de redondeo se aplica al valor en la celda B1?",
+                "options": [
+                    {
+                        "text": "Dos cifras decimales",
+                        "correct": false,
+                        "feedback": "Incorrecto. No se usan dos cifras, solo una."
+                    },
+                    {
+                        "text": "Cuatro cifras decimales",
+                        "correct": false,
+                        "feedback": "Incorrecto. Ese formato se aplica a los alargamientos, no a k."
+                    },
+                    {
+                        "text": "Una cifra decimal",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! El valor de k se muestra con una cifra decimal."
+                    },
+                    {
+                        "text": "Sin decimales",
+                        "correct": false,
+                        "feedback": "Incorrecto. El valor de k no se redondea a número entero."
+                    }
+                ]
+            },
+            {
+                "id": 6,
+                "question": "¿Qué formato de redondeo se aplica a los valores en el rango A4:A204?",
+                "options": [
+                    {
+                        "text": "Una cifra decimal",
+                        "correct": false,
+                        "feedback": "Incorrecto. Se muestran con dos cifras decimales."
+                    },
+                    {
+                        "text": "Dos cifras decimales",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! Los valores de la fuerza se muestran con dos decimales."
+                    },
+                    {
+                        "text": "Cuatro cifras decimales",
+                        "correct": false,
+                        "feedback": "Incorrecto. Ese formato corresponde a los alargamientos."
+                    },
+                    {
+                        "text": "Sin decimales",
+                        "correct": false,
+                        "feedback": "Incorrecto. La fuerza no se muestra como número entero."
+                    }
+                ]
+            },
+            {
+                "id": 7,
+                "question": "¿Qué formato de redondeo se aplica a los valores en el rango B4:B204?",
+                "options": [
+                    {
+                        "text": "Dos cifras decimales",
+                        "correct": false,
+                        "feedback": "Incorrecto. Los alargamientos necesitan mayor precisión."
+                    },
+                    {
+                        "text": "Cuatro cifras decimales",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! Los alargamientos se muestran con cuatro cifras decimales."
+                    },
+                    {
+                        "text": "Una cifra decimal",
+                        "correct": false,
+                        "feedback": "Incorrecto. No se muestran con una cifra decimal."
+                    },
+                    {
+                        "text": "Sin decimales",
+                        "correct": false,
+                        "feedback": "Incorrecto. Los alargamientos no son números enteros."
+                    }
+                ]
+            },
+            {
+                "id": 8,
+                "question": "¿Qué colores se aplican a las celdas A1:B1 y A3:B204?",
+                "options": [
+                    {
+                        "text": "Azul y amarillo",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! A1:B1 están en azul y A3:B204 en amarillo."
+                    },
+                    {
+                        "text": "Verde y rojo",
+                        "correct": false,
+                        "feedback": "Incorrecto. No se usan verde y rojo."
+                    },
+                    {
+                        "text": "Blanco y gris",
+                        "correct": false,
+                        "feedback": "Incorrecto. Esos colores no aparecen en la hoja."
+                    },
+                    {
+                        "text": "Naranja y azul",
+                        "correct": false,
+                        "feedback": "Incorrecto. No corresponde a los colores mostrados."
+                    }
+                ]
+            },
+            {
+                "id": 9,
+                "question": "¿Qué título aparece en la gráfica generada?",
+                "options": [
+                    {
+                        "text": "Fuerza contra deformación",
+                        "correct": false,
+                        "feedback": "Incorrecto. Ese no es el título usado."
+                    },
+                    {
+                        "text": "Ley de Hooke",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! El título de la gráfica es 'Ley de Hooke'."
+                    },
+                    {
+                        "text": "Alargamiento vs k",
+                        "correct": false,
+                        "feedback": "Incorrecto. El título no incluye k."
+                    },
+                    {
+                        "text": "Fuerza contra tiempo",
+                        "correct": false,
+                        "feedback": "Incorrecto. No se representa el tiempo en esta gráfica."
+                    }
+                ]
+            },
+            {
+                "id": 10,
+                "question": "¿Qué etiquetas tienen los ejes de la gráfica?",
+                "options": [
+                    {
+                        "text": "Fuerza (N) en X y Alargamiento (cm) en Y",
+                        "correct": true,
+                        "feedback": "¡Bien hecho! El eje X muestra la fuerza y el eje Y el alargamiento."
+                    },
+                    {
+                        "text": "Fuerza (N) en Y y Alargamiento (cm) en X",
+                        "correct": false,
+                        "feedback": "Incorrecto. Están invertidos, revisa la gráfica."
+                    },
+                    {
+                        "text": "Tiempo en X y Fuerza en Y",
+                        "correct": false,
+                        "feedback": "Incorrecto. No se utiliza el tiempo en este gráfico."
+                    },
+                    {
+                        "text": "Constante k en X y Fuerza en Y",
+                        "correct": false,
+                        "feedback": "Incorrecto. k no aparece en los ejes, solo en la fórmula."
+                    }
+                ]
+            }
+        ];
+
+        // Función para barajar un array (algoritmo Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Intercambia elementos
+            }
+            return array;
+        }
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let questions = []; // Las preguntas barajadas se almacenarán aquí
+
+        const quizTitleEl = document.getElementById('quiz-title');
+        const quizInstructionsEl = document.getElementById('quiz-instructions');
+        const questionAreaEl = document.getElementById('question-area');
+        const submitAnswerBtn = document.getElementById('submit-answer');
+        const nextQuestionBtn = document.getElementById('next-question');
+        const resultsAreaEl = document.getElementById('results-area');
+        const scoreTextEl = document.getElementById('score-text');
+
+        function loadQuiz() {
+            // Barajar las preguntas una vez al inicio del quiz
+            questions = shuffleArray([...quizDataRaw]);
+
+            quizTitleEl.textContent = "Cuestionario: Ley de Hooke"; // Título fijo
+            quizInstructionsEl.textContent = "Responde las siguientes preguntas sobre la Ley de Hooke y la hoja de cálculo."; // Instrucciones fijas
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            questionAreaEl.innerHTML = '';
+            submitAnswerBtn.style.display = 'inline-block';
+            nextQuestionBtn.style.display = 'none';
+            submitAnswerBtn.disabled = true;
+
+            if (currentQuestionIndex < questions.length) {
+                const currentQuestion = questions[currentQuestionIndex];
+                const questionContainer = document.createElement('div');
+                questionContainer.classList.add('question-container');
+
+                const questionText = document.createElement('p');
+                questionText.classList.add('question-text');
+                questionText.textContent = `${currentQuestionIndex + 1}. ${currentQuestion.question}`;
+                questionContainer.appendChild(questionText);
+
+                const optionsList = document.createElement('ul');
+                optionsList.classList.add('options-list');
+
+                // Barajar las opciones para cada pregunta
+                const shuffledOptions = shuffleArray([...currentQuestion.options]);
+
+                shuffledOptions.forEach((option, index) => {
+                    const listItem = document.createElement('li');
+                    const radioInput = document.createElement('input');
+                    radioInput.type = 'radio';
+                    radioInput.name = `question-${currentQuestionIndex}`;
+                    radioInput.id = `q${currentQuestionIndex}-option${index}`;
+                    radioInput.value = option.text; // Usar el texto de la opción como valor, o un índice mapeado si prefieres
+                    radioInput.onchange = () => { submitAnswerBtn.disabled = false; };
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `q${currentQuestionIndex}-option${index}`;
+                    label.textContent = option.text;
+
+                    listItem.appendChild(radioInput);
+                    listItem.appendChild(label);
+                    optionsList.appendChild(listItem);
+                });
+
+                questionContainer.appendChild(optionsList);
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.id = `feedback-${currentQuestionIndex}`;
+                feedbackDiv.classList.add('feedback');
+                questionContainer.appendChild(feedbackDiv);
+
+                questionAreaEl.appendChild(questionContainer);
+            } else {
+                showResults();
+            }
+        }
+
+        function submitAnswer() {
+            const currentQuestion = questions[currentQuestionIndex];
+            const selectedOptionInput = document.querySelector(`input[name="question-${currentQuestionIndex}"]:checked`);
+
+            if (!selectedOptionInput) {
+                alert("Por favor, selecciona una opción.");
+                return;
+            }
+
+            const selectedOptionText = selectedOptionInput.value;
+            // Encontrar la opción seleccionada dentro del array original para obtener su propiedad 'correct' y 'feedback'
+            const selectedOptionData = currentQuestion.options.find(option => option.text === selectedOptionText);
+
+            const feedbackDiv = document.getElementById(`feedback-${currentQuestionIndex}`);
+
+            if (selectedOptionData.correct) { // Usar .correct en lugar de .isCorrect
+                feedbackDiv.textContent = selectedOptionData.feedback;
+                feedbackDiv.classList.remove('incorrect');
+                feedbackDiv.classList.add('correct');
+                score++;
+            } else {
+                feedbackDiv.textContent = selectedOptionData.feedback;
+                feedbackDiv.classList.remove('correct');
+                feedbackDiv.classList.add('incorrect');
+            }
+
+            document.querySelectorAll(`input[name="question-${currentQuestionIndex}"]`).forEach(input => {
+                input.disabled = true;
+            });
+            submitAnswerBtn.disabled = true;
+            submitAnswerBtn.style.display = 'none';
+            nextQuestionBtn.style.display = 'inline-block';
+
+            if (currentQuestionIndex === questions.length - 1) {
+                nextQuestionBtn.textContent = "Ver Resultados";
+            }
+        }
+
+        function loadNextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        function showResults() {
+            questionAreaEl.style.display = 'none';
+            submitAnswerBtn.style.display = 'none';
+            nextQuestionBtn.style.display = 'none';
+            resultsAreaEl.style.display = 'block';
+            scoreTextEl.textContent = `Obtuviste ${score} de ${questions.length} preguntas correctas.`;
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            questionAreaEl.style.display = 'block';
+            resultsAreaEl.style.display = 'none';
+            nextQuestionBtn.textContent = "Siguiente Pregunta";
+            loadQuiz(); // Cargar el quiz de nuevo para re-barajar preguntas y opciones
+        }
+
+        window.onload = loadQuiz;
+    </script>
+
+</body>
+</html>
